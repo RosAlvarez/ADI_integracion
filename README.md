@@ -1,4 +1,4 @@
-# Deploy de la plataforma + K8S cluster
+# Creación de la plataforma - K8S cluster
 
 1. Creamos las 2 maquinas virtuales con VirtualBox
 
@@ -34,13 +34,11 @@ $ echo \
 $ sudo apt-get install docker-ce docker-ce-cli containerd.io docker-compose-plugin
 ```
 
-3. Kubernetes vanilla -> insalar con kubeadm
+3. Instalamos las herramientas necesarias para hacer una plataforma K8S vanilla: kubeadm, kubectl, kubelet:
 
-> Para instalar kubeadm, kubectl, kubelet:
+Para instalar kubeadm, kubectl, kubelet:
 
 ```
-https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/
-
 $ sudo apt-get update
 $ sudo apt-get install -y apt-transport-https ca-certificates curl
 
@@ -52,7 +50,8 @@ $ sudo apt-get update
 $ sudo apt-get install -y kubelet kubeadm kubectl
 $ sudo apt-mark hold kubelet kubeadm kubectl
 ```
-> Para poder iniciar un cluster, primero debemos deshabilitar el swap space:
+
+> Nota: para poder iniciar un cluster, primero debemos deshabilitar el swap space y habilitar el ip forwarding:
 
 ```
 $ nano /etc/fstab
@@ -62,19 +61,14 @@ comentar la linea de swap
 $ sudo swapoff -a
 ```
 
-> Habilitar IP forwarding para la comunicación con los nodos worker?
-
 ```
 $ sudo nano /etc/sysctl.conf
 
 descomentamos la linea: net.ipv4.ip_forward=1
 ```
-
 ### IPs --> worker 192.168.1.147, director 192.168.1.148
 
-
-
-4. Iniciamos el cluster en la maquina **director** :
+4. Iniciamos el cluster en la maquina **director** (la que actua de nodo master):
 
 ```
 #para arreglar el error de CRI
@@ -86,7 +80,7 @@ $ systemctl restart containerd
 $ sudo kubeadm init --pod-network-cidr=192.168.0.0/16
 ```
 
-> Después el comando nos indicará unos pasos para poder iniciar el cluster
+Después el comando nos indicará unos pasos para poder iniciar el cluster
 
 ```
 $ mkdir -p $HOME/.kube
@@ -94,7 +88,7 @@ $ sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
 $ sudo chown $(id -u):$(id -g) $HOME/.kube/config
 ```
 
-> Para que el kubelet no produzca crasheo y poder configurar los cgroup:
+> Nota: para evitar que el kubelet produzca crash debido a la configuración de los cgroup:
 
 ```
 Añadimos el siguiente contenido al archivo /etc/containerd/config.toml
@@ -113,7 +107,7 @@ version = 2
             SystemdCgroup = true
 ```
 
-5. Para que los contenedores puedan comunicarse dentro del cluster necesitamos un add-on para la política de red (usamos Calico)
+5. Para que los contenedores puedan comunicarse dentro del cluster necesitamos un add-on para la política de red (usamos **Calico**)
 
 ```
 $ kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/tigera-operator.yaml
@@ -130,9 +124,9 @@ $ kubectl taint nodes --all node-role.kubernetes.io/control-plane-
 $ sudo kubeadm join 192.168.148:6443 <informacion_obtenida_init>
 ```
 
-# Deployment de la aplicación en el Cluster
+# Despliegue de la aplicación en el Cluster
 
-Una vez tenemos el Dockerfile y los archivos source, utilizaremos el shell script de la anterior entrega para buildear la imagen del docker:
+1. Una vez tenemos el Dockerfile y los archivos source (en la carpeta /docker), utilizaremos el shell script de la anterior entrega para buildear la imagen del docker:
 
 ```
 $ ./build.sh
@@ -148,14 +142,10 @@ Ahora, una vez tenemos la imagen del Docker debemos preparar su deployment en el
 $ pip install kubernetes
 ```
 
-1. Para realizar el deployment debemos indicar la configuración del contenedor o pod que aloja los servicios de directorios, blob y autenticación.
-
-
-2. Simplemente nos reducimos a ejecutar el script **deploy.py** 
+2. Para hacer el deployment debemos ejecutar el script **deploy.py**, donde se establece la configuración del contenedor o pod que aloja los servicios de directorios, blob y autenticación.
 
 ```
-$ python3 deploy.py <url de autenticación> 
-
+$ python3 ./deployment/deploy.py <url de autenticación> 
 ```
 Donde los argumentos opcionales son:
 
@@ -170,13 +160,11 @@ Donde los argumentos opcionales son:
 
 > Nota: tener en cuenta que aunque el argumento --aport (puerto de auth) es opcional, el puerto que se indique en la URL de autenticación debe ser el mismo a este.
 
-3. Exponemos los tres servicios, del tipo NodePort, así podrá ser accedido desde fuera del cluster:
+En el propio archivo de deploy hacemos la exposición de los tres servicios, así podrán ser accedidos desde fuera del cluster (usando la dirección IP del control-plane (director)).
 
-```
-# En el propio archivo deploy.py
-```
-os.system("kubectl expose deployment deploy-restfs --type=NodePort --name=auth-service --port="+str(args.aport)+" --target-port="+str(args.aport)+"")
-os.system("kubectl expose deployment deploy-restfs --type=NodePort --name=dirs-service --port="+str(args.dport)+" --target-port="+str(args.dport)+"")
-os.system("kubectl expose deployment deploy-restfs --type=NodePort --name=blob-service --port="+str(args.bport)+" --target-port="+str(args.bport)+"")
-```
+# Pruebas de cliente
+
+La API puede ser probada con el archivo **main.py** del paquete restfs_client. 
+
+
 
