@@ -1,10 +1,19 @@
 # Creación de la plataforma - K8S cluster
 
+## Archivos
+
+- /deployment/deploy.py: script de lanzamiento del despliegue utilizando Python+K8S.
+- /docker: carpeta con los paquetes (src) de cada servicio y los archivos para la contruccion de la imagen docker.
+- /config: carpeta donde encontramos archivos necesarios para la creación de la plataforma
+- build.sh: script para la creación de la imagen. En nuestro caso al estar la imagen actualizada en Docker Hub no es necesario ejecutarlo.
+
+## Guia paso a paso
+
 1. **Creamos las 2 maquinas virtuales con VirtualBox**
 
->Nota: antes de nada debemos establecer la asignación de dirección IP de forma estática en ambas máquinas. Por dos razones:
-    - Para acceder a las máquinas mediante ssh de una forma más sencilla.
-    - Para que la dirección del nodo master (Director) sea siempre la misma
+> Nota: antes de nada debemos establecer la asignación de dirección IP de forma estática en ambas máquinas. Por dos razones:
+- Para acceder a las máquinas mediante ssh de una forma más sencilla.
+- Para que la dirección del nodo master (Director) sea siempre la misma
 
 ```
 cambiamos en /etc/network/interfaces
@@ -87,31 +96,17 @@ $ sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
 $ sudo chown $(id -u):$(id -g) $HOME/.kube/config
 ```
 
-> Nota: para evitar que el kubelet produzca crash debido a la configuración de los cgroup:
+> Nota: para evitar que el kubelet produzca crash debido a la configuración de los cgroup, añadimos el contenido del archivo **config.toml** de la carpeta **config** en la siguiente ruta
 
 ```
-Añadimos el siguiente contenido al archivo /etc/containerd/config.toml
-
-$ touch /etc/containerd/config.toml
-
-# Content of file /etc/containerd/config.toml
-version = 2
-[plugins]
-  [plugins."io.containerd.grpc.v1.cri"]
-   [plugins."io.containerd.grpc.v1.cri".containerd]
-      [plugins."io.containerd.grpc.v1.cri".containerd.runtimes]
-        [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
-          runtime_type = "io.containerd.runc.v2"
-          [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
-            SystemdCgroup = true
+$  touch /etc/containerd/config.toml
 ```
 
-5. **Para que los contenedores puedan comunicarse dentro del cluster necesitamos un add-on para la política de red (usamos _Calico_)**
+5. **Para que los contenedores puedan comunicarse dentro del cluster necesitamos un add-on para la política de red (usamos _Calico_ y el contenido del archivo de configuración _custom-resources.yaml_)**
 
 ```
 $ kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/tigera-operator.yaml
 
-#(archivo local con cidr cambiado por 10.0.0.0/16)
 $ kubectl create -f ./custom-resources.yaml
 
 $ kubectl taint nodes --all node-role.kubernetes.io/control-plane-
@@ -123,9 +118,17 @@ $ kubectl taint nodes --all node-role.kubernetes.io/control-plane-
 $ sudo kubeadm join 192.168.148:6443 <informacion_obtenida_init>
 ```
 
+> En caso de que hayamos perdido el comando de join, introducimos:
+
+```
+$ kubeadm token create --print-join-command
+```
+
 # Despliegue de la aplicación en el Cluster
 
-1. **Una vez tenemos el Dockerfile y los archivos source (en la carpeta /docker), utilizaremos el shell script de la anterior entrega para buildear la imagen del docker:**
+1. **(PASO OPCIONAL)**
+
+Una vez tenemos el Dockerfile y los archivos source (en la carpeta /docker), utilizaremos el shell script de la anterior entrega para buildear la imagen del docker:**
 
 ```
 $ ./build.sh
@@ -133,7 +136,10 @@ $ ./build.sh
 
 > Nota: para poder desplegar la aplicacion en el cluster debemos tener en cuenta que la imagen generada del docker debe ser subida a Docker Hub, para poder automatizar el pull de la misma al hacer el contenedor.
 
-Ahora, una vez tenemos la imagen del Docker debemos preparar su deployment en el cluster:
+Ahora, una vez tenemos la imagen actualizada en Docker Hub debemos preparar su deployment en el cluster:
+
+2. **Para hacer el deployment debemos ejecutar el script _deploy.py_, donde se establece la configuración del contenedor o pod que aloja los servicios de directorios, blob y autenticación.**
+
 
 > Nota: para automatizar el despliegue de la aplicación hemos utilizado el cliente de Python para K8s (Kubernetes), cuya instalación debemos hacer localmente al director:
 
@@ -141,11 +147,12 @@ Ahora, una vez tenemos la imagen del Docker debemos preparar su deployment en el
 $ pip install kubernetes
 ```
 
-2. **Para hacer el deployment debemos ejecutar el script _deploy.py_, donde se establece la configuración del contenedor o pod que aloja los servicios de directorios, blob y autenticación.**
+Para realizar el despliegue introducimos:
 
 ```
 $ python3 ./deployment/deploy.py <url de autenticación> 
 ```
+
 Donde los argumentos opcionales son:
 
 - -a, --admin: token de administrador. Por defecto: valor random generado 
@@ -156,6 +163,8 @@ Donde los argumentos opcionales son:
 - -ad, --authdb: ruta de la db de auth. Por defecto: /db_auth
 - -bd, --blobdb: ruta del storage de blob. Por defecto: /db_files
 - -dd, --dirsdb: ruta de la db de dirs. Por defecto: /db_dirs
+- -h, --help: opción indica todos los argumentos y sus valores.
+
 
 > Nota: tener en cuenta que aunque el argumento --aport (puerto de auth) es opcional, el puerto que se indique en la URL de autenticación debe ser el mismo a este.
 
@@ -163,7 +172,7 @@ En el propio archivo de deploy hacemos la exposición de los tres servicios, as�
 
 # Pruebas de cliente
 
-La API puede ser probada con el archivo **main.py** del paquete restfs_client. 
+La API puede ser probada con el archivo **main.py** del paquete restfs_client. Tener en cuenta que este paquete debe estar instalado en el host fuera o dentro del cluster.
 
 
 
