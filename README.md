@@ -66,7 +66,6 @@ $ sudo nano /etc/sysctl.conf
 
 descomentamos la linea: net.ipv4.ip_forward=1
 ```
-### IPs --> worker 192.168.1.147, director 192.168.1.148
 
 4. **Iniciamos el cluster en la maquina _director_ (la que actua de nodo master):**
 
