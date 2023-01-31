@@ -31,14 +31,8 @@ ADD restfs_blob /docker/restfs_blob
 ADD restfs_common /docker/restfs_common
 ADD restfs_client /docker/restfs_client
 
-# Copia de los setups de los paquetes
+# Copia del setup de los paquetes
 COPY setup.py /docker/setup.py
-
-## Copiar Base de datos
-
-
-## Copiar Script de lanzamiento
-
 
 ## Lanzamiento entrypoint del docker
 

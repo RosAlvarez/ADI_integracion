@@ -9,7 +9,6 @@ DIRS_PORT = 3002
 BLOB_PORT = 3003
 
 from kubernetes import client, config
-import time
 import argparse
 import uuid
 import os,sys

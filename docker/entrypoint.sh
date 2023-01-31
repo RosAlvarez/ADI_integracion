@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# mkdir -p $2
-# mv /data.db $2/data.db
-
 URI_AUTH=$1
 ADMIN=$2
 ADDRESS=$3
@@ -21,4 +18,3 @@ python3 docker/restfs_dirs/server.py $URI_AUTH -p $PORT_DIR -l $ADDRESS -s $DB_D
 echo "Done dirs"
 python3 docker/restfs_blob/server.py $URI_AUTH -p $PORT_BLOB -l $ADDRESS -s $DB_BLOB 
 echo "Done blob"
-# python3 restdir_script/server_script.py https://auth.serv.com -a admin -d /db
