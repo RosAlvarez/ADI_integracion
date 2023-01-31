@@ -89,7 +89,7 @@ $ sudo kubeadm init --pod-network-cidr=192.168.0.0/16
 > Después el comando nos indicará unos pasos para poder iniciar el cluster
 
 ```
-$ mkdir -p $HOME/.kube 
+$ mkdir -p $HOME/.kube
 $ sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config 
 $ sudo chown $(id -u):$(id -g) $HOME/.kube/config
 ```
@@ -97,7 +97,7 @@ $ sudo chown $(id -u):$(id -g) $HOME/.kube/config
 > Para que el kubelet no produzca crasheo y poder configurar los cgroup:
 
 ```
- Añadimos el siguiente contenido al archivo /etc/containerd/config.toml
+Añadimos el siguiente contenido al archivo /etc/containerd/config.toml
 
 $ touch /etc/containerd/config.toml
 
@@ -119,7 +119,7 @@ version = 2
 $ kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/tigera-operator.yaml
 
 #(archivo local con cidr cambiado por 10.0.0.0/16)
-$ kubectl create -f ./custom-resources.yaml 
+$ kubectl create -f ./custom-resources.yaml
 
 $ kubectl taint nodes --all node-role.kubernetes.io/control-plane-
 ```
@@ -132,18 +132,13 @@ $ sudo kubeadm join 192.168.148:6443 <informacion_obtenida_init>
 
 # Deployment de la aplicación en el Cluster
 
-Para poder desplegar la aplicacion en el cluster debemos almacenar localmente en nodo maestro la aplicación virtualizada en Docker.
-Utilizaremos el siguiente para ello:
-
-``` 
-$ scp <directorio_docker> <usuario>@director: .
-```
-
 Una vez tenemos el Dockerfile y los archivos source, utilizaremos el shell script de la anterior entrega para buildear la imagen del docker:
 
 ```
 $ ./build.sh
 ```
+
+> Nota: para poder desplegar la aplicacion en el cluster debemos tener en cuenta que la imagen generada del docker debe ser subida a Docker Hub, para poder automatizar el pull de la misma al hacer el contenedor.
 
 Ahora, una vez tenemos la imagen del Docker debemos preparar su deployment en el cluster:
 
@@ -153,80 +148,35 @@ Ahora, una vez tenemos la imagen del Docker debemos preparar su deployment en el
 $ pip install kubernetes
 ```
 
-1. Para realizar el deployment debemos indicar la configuración del contenedor o pod que aloja la aplicación. Seguimos la siguiente configuración:
+1. Para realizar el deployment debemos indicar la configuración del contenedor o pod que aloja los servicios de directorios, blob y autenticación.
 
-> En su versión .yaml:
-
-```
-    apiVersion: apps/v1
-    kind: Deployment
-    metadata:
-    name: deploy-dirapi
-    namespace: default
-    spec:
-        replicas: 1
-    template:
-        metadata:
-            labels:
-                app: dirapi
-        spec:
-            containers:
-            - name: dirapi-container
-              image: debian-dirapi
-              imagePullPolicy: Always
-              volumeMount:
-                -mountPath: ${args.db}
-                 name: dirdb
-              ports:
-                -containerPort: ${args.port}
-              args: [${args.pos_arg}, ${args.db}, ${args.admin}, ${args.listening}, ${args.port}]
-            volumes:
-                name: dirdb
-```
-
-> En la implementación .py:
-
-```
-    volume = client.V1Volume(
-        name="dirdb"
-    ) 
-    container = client.V1Container(
-        name="dirapi-container",
-        image="josemimo2/debian-dirapi:latest",
-        image_pull_policy="Always",
-        volume_mounts=[client.V1VolumeMount(name="dirdb", mount_path=args.db)],
-        ports=[client.V1ContainerPort(container_port=args.port)],
-        args=[str(args.pos_arg), str(args.db), str(args.admin), str(args.listening), str(args.port)]
-    )
-    # Template
-    template = client.V1PodTemplateSpec(
-        metadata=client.V1ObjectMeta(labels={"app": "dirapi"}),
-        spec=client.V1PodSpec(containers=[container], volumes=[volume],restart_policy="Always"))
-    # Spec
-    spec = client.V1DeploymentSpec(
-        replicas=1,
-        selector=client.V1LabelSelector(
-            match_labels={"app": "dirapi"}
-        ),
-        template=template)
-    # Deployment
-    deployment = client.V1Deployment(
-        api_version="apps/v1",
-        kind="Deployment",
-        metadata=client.V1ObjectMeta(name="deploy-dirapi"),
-        spec=spec)
-```
 
 2. Simplemente nos reducimos a ejecutar el script **deploy.py** 
 
 ```
-$ python3 deploy.py <arg1> -a <arg2> -d <arg3> -l <arg4> -p <arg5>
-```
+$ python3 deploy.py <url de autenticación> 
 
-3. Exponemos la aplicación mediante un servicio del tipo NodePort, así podrá ser accedido desde fuera del cluster:
+```
+Donde los argumentos opcionales son:
+
+- -a, --admin: token de administrador. Por defecto: valor random generado 
+- -ap, --aport: puerto de escucha API auth. Por defecto: 3001
+- -dp, --dport: puerto de escucha API dirs. Por defecto: 3002
+- -bp, --bport: puerto de escucha API blob. Por defecto: 3003
+- -l, --listening: dirección IP API. Por defecto: 0.0.0.0
+- -ad, --authdb: ruta de la db de auth. Por defecto: /db_auth
+- -bd, --blobdb: ruta del storage de blob. Por defecto: /db_files
+- -dd, --dirsdb: ruta de la db de dirs. Por defecto: /db_dirs
+
+> Nota: tener en cuenta que aunque el argumento --aport (puerto de auth) es opcional, el puerto que se indique en la URL de autenticación debe ser el mismo a este.
+
+3. Exponemos los tres servicios, del tipo NodePort, así podrá ser accedido desde fuera del cluster:
 
 ```
 # En el propio archivo deploy.py
-$ os.system(kubectl expose deployment deploy-dirapi --type=NodePort --name=flask-service --port=80 --target-port=3002)
+```
+os.system("kubectl expose deployment deploy-restfs --type=NodePort --name=auth-service --port="+str(args.aport)+" --target-port="+str(args.aport)+"")
+os.system("kubectl expose deployment deploy-restfs --type=NodePort --name=dirs-service --port="+str(args.dport)+" --target-port="+str(args.dport)+"")
+os.system("kubectl expose deployment deploy-restfs --type=NodePort --name=blob-service --port="+str(args.bport)+" --target-port="+str(args.bport)+"")
 ```
 

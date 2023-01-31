@@ -4,7 +4,7 @@ This example covers the following:
     - Create deployment
     - Annotate deployment
 """
-AUTH_PORT = 3004
+AUTH_PORT = 3001
 DIRS_PORT = 3002
 BLOB_PORT = 3003
 
