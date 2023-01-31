@@ -1,6 +1,6 @@
 # Creación de la plataforma - K8S cluster
 
-1. Creamos las 2 maquinas virtuales con VirtualBox
+1. **Creamos las 2 maquinas virtuales con VirtualBox**
 
 >Nota: antes de nada debemos establecer la asignación de dirección IP de forma estática en ambas máquinas. Por dos razones:
     - Para acceder a las máquinas mediante ssh de una forma más sencilla.
@@ -14,7 +14,7 @@ address 192.168.1.147 (worker)
 address 192.168.1.148 (director)
 ```
 
-2. Instalamos en ambas docker.
+2. **Instalamos en ambas docker.**
 
 ```
 $ sudo apt-get update
@@ -34,7 +34,7 @@ $ echo \
 $ sudo apt-get install docker-ce docker-ce-cli containerd.io docker-compose-plugin
 ```
 
-3. Instalamos las herramientas necesarias para hacer una plataforma K8S vanilla: kubeadm, kubectl, kubelet:
+3. **Instalamos las herramientas necesarias para hacer una plataforma K8S vanilla: kubeadm, kubectl, kubelet:**
 
 Para instalar kubeadm, kubectl, kubelet:
 
@@ -68,7 +68,7 @@ descomentamos la linea: net.ipv4.ip_forward=1
 ```
 ### IPs --> worker 192.168.1.147, director 192.168.1.148
 
-4. Iniciamos el cluster en la maquina **director** (la que actua de nodo master):
+4. **Iniciamos el cluster en la maquina _director_ (la que actua de nodo master):**
 
 ```
 #para arreglar el error de CRI
@@ -107,7 +107,7 @@ version = 2
             SystemdCgroup = true
 ```
 
-5. Para que los contenedores puedan comunicarse dentro del cluster necesitamos un add-on para la política de red (usamos **Calico**)
+5. **Para que los contenedores puedan comunicarse dentro del cluster necesitamos un add-on para la política de red (usamos _Calico_)**
 
 ```
 $ kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/tigera-operator.yaml
@@ -118,7 +118,7 @@ $ kubectl create -f ./custom-resources.yaml
 $ kubectl taint nodes --all node-role.kubernetes.io/control-plane-
 ```
 
-6. Añadimos el nodo worker al cluster
+6. **Añadimos el nodo worker al cluster**
 
 ```
 $ sudo kubeadm join 192.168.148:6443 <informacion_obtenida_init>
@@ -126,7 +126,7 @@ $ sudo kubeadm join 192.168.148:6443 <informacion_obtenida_init>
 
 # Despliegue de la aplicación en el Cluster
 
-1. Una vez tenemos el Dockerfile y los archivos source (en la carpeta /docker), utilizaremos el shell script de la anterior entrega para buildear la imagen del docker:
+1. **Una vez tenemos el Dockerfile y los archivos source (en la carpeta /docker), utilizaremos el shell script de la anterior entrega para buildear la imagen del docker:**
 
 ```
 $ ./build.sh
@@ -142,7 +142,7 @@ Ahora, una vez tenemos la imagen del Docker debemos preparar su deployment en el
 $ pip install kubernetes
 ```
 
-2. Para hacer el deployment debemos ejecutar el script **deploy.py**, donde se establece la configuración del contenedor o pod que aloja los servicios de directorios, blob y autenticación.
+2. **Para hacer el deployment debemos ejecutar el script _deploy.py_, donde se establece la configuración del contenedor o pod que aloja los servicios de directorios, blob y autenticación.**
 
 ```
 $ python3 ./deployment/deploy.py <url de autenticación> 
