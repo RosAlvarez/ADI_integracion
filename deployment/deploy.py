@@ -71,14 +71,13 @@ def main():
     # Loading the local kubeconfig
     config.load_kube_config()
     apps_v1_api = client.AppsV1Api()
-    # service_config = client.V1Service()
 
     token = str(uuid.uuid4())
     direccion = "0.0.0.0"
     auth_path = "/db_auth"
     dirs_path = "/db_dirs"
     blob_path = "/db_files"
-    #python3 deploy.py 
+    
     parser = argparse.ArgumentParser(description="Restdir arguments")
     parser.add_argument('pos_arg', type=str, help='URL de la API de autenticación') #<- URl api auth
     parser.add_argument("-a", "--admin", help='Token de admin', action='store', default=token, type=str)
@@ -92,18 +91,6 @@ def main():
 
     args = parser.parse_args()
 
-    #configuración del servicio
-#     service_config.metadata = client.V1ObjectMeta(name="flask-app-service", labels={"app": "flask-app-deployment"})
-#     service_config.spec = client.V1ServiceSpec(
-#     selector={"app": "flask-app-deployment"},
-#     ports=[client.V1ServicePort(protocol="TCP", port=80, target_port=args.port)],
-#     external_i_ps=["192.168.1.10"],
-#     type="LoadBalancer"
-# )
-
-    #crear namespace del servicio
-    # api_instance.create_namespaced_service(namespace="default", body=service_config)
-    
     deployment_obj = create_deployment_object(args)
 
     create_deployment(apps_v1_api, deployment_obj)
@@ -111,10 +98,7 @@ def main():
     os.system("kubectl expose deployment deploy-restfs --type=NodePort --name=auth-service --external-ip=192.168.1.100 --port="+str(args.aport)+" --target-port="+str(args.aport)+"")
     os.system("kubectl expose deployment deploy-restfs --type=NodePort --name=dirs-service --external-ip=192.168.1.100 --port="+str(args.dport)+" --target-port="+str(args.dport)+"")
     os.system("kubectl expose deployment deploy-restfs --type=NodePort --name=blob-service --external-ip=192.168.1.100 --port="+str(args.bport)+" --target-port="+str(args.bport)+"")
-    # os.system("sudo iptables -A INPUT -p tcp -d 192.168.1.100 --sport 80 -j ACCEPT")
-    # os.system("sudo iptables -A OUTPUT -p tcp -s 192.168.1.100 --dport 80 -j ACCEPT")
-    # os.system("sudo iptables -A INPUT -p tcp  -d 192.168.1.100 --dport 32625 -j ACCEPT")
-    # os.system("sudo iptables -A OUTPUT -p tcp -s 192.168.1.100 --sport 32625 -j ACCEPT")
+
 if __name__ == "__main__":
     main()
 
