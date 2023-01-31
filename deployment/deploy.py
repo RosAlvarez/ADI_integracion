@@ -98,6 +98,8 @@ def main():
     os.system("kubectl expose deployment deploy-restfs --type=NodePort --name=dirs-service --external-ip=192.168.1.100 --port="+str(args.dport)+" --target-port="+str(args.dport)+"")
     os.system("kubectl expose deployment deploy-restfs --type=NodePort --name=blob-service --external-ip=192.168.1.100 --port="+str(args.bport)+" --target-port="+str(args.bport)+"")
 
+    print("El token de administrador es: "+token)
+    
 if __name__ == "__main__":
     main()
 
